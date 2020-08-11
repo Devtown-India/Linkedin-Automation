@@ -7,6 +7,9 @@ from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 from parsel import Selector
 import csv
+import time
+import pickle
+
 
 # function to ensure all key data fields have a value
 def validate_field(field):
@@ -22,7 +25,7 @@ def validate_field(field):
 writer = csv.writer(open(parameters.file_name, 'w'))
 
 # writerow() method to the write to the file object
-writer.writerow(['Name', 'Job Title', 'Company', 'College', 'Location', 'URL', 'About', 'Experience'])
+writer.writerow(['Name', 'Headline', 'Location', 'Headings', 'Highlights', 'Summary', 'Activity', 'Education', 'Skills', 'Interests', 'URL'])
 
 driver = webdriver.Chrome(ChromeDriverManager().install())
 
@@ -40,39 +43,19 @@ log_in_button = driver.find_element_by_class_name('sign-in-form__submit-button')
 log_in_button.click()
 sleep(0.5)
 
-def search(query):
-	driver.get('https:www.google.com')
-	sleep(3)
-
-	search_query = driver.find_element_by_name('q')
-	search_query.send_keys(parameters.search_query)
-	sleep(0.5)
-
-	search_query.send_keys(Keys.RETURN)
-	sleep(3)
-
-	linkedin_urls = driver.find_elements_by_class_name('iUh30')
-
-	return linkedin_urls
-
-
-def check_urls(linkedin_urls):
-	linkedin_urlz = list()
-	for url in linkedin_urls:
-		urls = url.text.split()
-		if len(urls) == 0:
-			continue
-		else:
-			linkedin_urlz.append(urls[2])
-
-	return linkedin_urlz
+with open('connections.pkl', 'rb') as f:
+	mynewlist = pickle.load(f)
 
 def save(linkedin_urlz):
 	for name in linkedin_urlz:
 
-		driver.get('https://uk.linkedin.com/in/'+name)
+		driver.get(name)
 
 		sleep(5)
+
+		driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
+
+		sleep(1.5)
 
 		sel = Selector(text = driver.page_source)
 
@@ -84,71 +67,77 @@ def save(linkedin_urlz):
 
 		# xpath to extract the text from the class containing the job title
 
-		job_title = sel.xpath('//*[starts-with(@class, "mt1 t-18 t-black t-normal break-words")]/text()').extract_first()
+		headline = sel.xpath('//*[starts-with(@class, "mt1 t-18 t-black t-normal break-words")]/text()').extract_first()
 
-		if job_title:
-			job_title = job_title.strip()
-
-		# xpath to extract the text from the class containing the company
-		company = sel.xpath('//*[starts-with(@class, "text-align-left ml2 t-14 t-black t-bold full-width lt-line-clamp lt-line-clamp--multi-line ember-view")]/text()').extract_first()
-
-		if company:
-			company = company.strip()
-
-		# xpath to extract the text from the class containing the college
-		college = sel.xpath('//*[starts-with(@id, "ember97")]/text()').extract_first()
-
-		if college:
-			college = college.strip()
-
-		# xpath to extract the text from the class containing the location
+		if headline:
+			headline = headline.strip()
 
 		location = sel.xpath('//*[starts-with(@class, "t-16 t-black t-normal inline-block")]/text()').extract_first()
 
 		if location:
 			location = location.strip()
 
-		about = sel.xpath('//*[starts-with(@class, "lt-line-clamp__line")]/text()').extract_first()
+		headings = driver.find_elements_by_class_name('pv-profile-section__card-heading')
+		headings = [x.text for x in headings]
+		headings = ''.join(headings)		
 
-		if about:
-			about = about.strip()
+		highlights = driver.find_elements_by_xpath("//ul[starts-with(@class,'pv-highlights-section__list list-style-none')]")
+		highlights = [x.text for x in highlights]
+		highlights = ''.join(highlights)		
 
-		exp = sel.xpath('//*[starts-with(@class, "t-16 t-black t-bold")]/text()').extract_first()
+		summary = sel.xpath('//*[starts-with(@class, "lt-line-clamp__line")]/text()').extract_first()
 
-		if exp:
-			exp = exp.strip()
+		if summary:
+			summary = summary.strip()
 
-		linkedin_url = driver.current_url
+		activity = driver.find_elements_by_xpath("//section[starts-with(@class,'pv-profile-section pv-recent-activity-section-v2 artdeco-container-card artdeco-card ember-view')]")
+		activity = [x.text for x in activity]
+		activity = ''.join(activity)		
+
+		edu = driver.find_elements_by_xpath("//ul[starts-with(@class,'pv-profile-section__section-info section-info pv-profile-section__section-info--has-no-more')]")
+		edu = [x.text for x in edu]
+		edu = ''.join(edu)		
+
+		skills = driver.find_elements_by_xpath("//ol[starts-with(@class,'pv-skill-categories-section__top-skills pv-profile-section__section-info section-info pb1')]")
+		skills = [x.text for x in skills]
+		skills = ''.join(skills)		
+
+		interests = driver.find_elements_by_xpath("//ul[starts-with(@class,'pv-profile-section__section-info section-info display-flex justify-flex-start overflow-hidden')]")
+		interests = [x.text for x in interests]
+		interests = ''.join(interests)		
+
+		url = driver.current_url
 
 		# validating if the fields exist on the profile
 		name = validate_field(name)
-		job_title = validate_field(job_title)
-		company = validate_field(company)
-		college = validate_field(college)
+		headline = validate_field(headline)
 		location = validate_field(location)
-		linkedin_url = validate_field(linkedin_url)
-		about = validate_field(about)
-		exp = validate_field(exp)
+		headings = validate_field(headings)
+		highlights = validate_field(highlights)
+		summary = validate_field(summary)
+		activity = validate_field(activity)
+		edu = validate_field(edu)
+		skills = validate_field(skills)
+		interests = validate_field(interests)
+		url = validate_field(url)
 
 		# writing the corresponding values to the header
 		writer.writerow([name.encode('utf-8'),
-                 job_title.encode('utf-8'),
-                 company.encode('utf-8'),
-                 college.encode('utf-8'),
+                 headline.encode('utf-8'),
                  location.encode('utf-8'),
-                 linkedin_url.encode('utf-8'),
-                 about.encode('utf-8'),
-                 exp.encode('utf-8')])
+                 headings.encode('utf-8'),
+                 highlights.encode('utf-8'),
+                 summary.encode('utf-8'),
+                 activity.encode('utf-8'),
+                 edu.encode('utf-8'),
+                 skills.encode('utf-8'),
+                 interests.encode('utf-8'),
+                 url.encode('utf-8')])
 
-for search_query in ['site:linkedin.com/in/ AND "python developer"', 'site:linkedin.com/in/ AND "data scientist"']:
-	
-	linkedin_urls = search(search_query)
+		print(name, ":Done")
 
-	#linkedin_urls = [url.text.split()[2] for url in linkedin_urls]
-	linkedin_urlz = check_urls(linkedin_urls)
+link_list = mynewlist[:100]
 
-	sleep(0.5)
-
-	save(linkedin_urlz)
+save(link_list)
 
 driver.quit()
