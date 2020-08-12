@@ -136,7 +136,7 @@ def save(linkedin_urlz):
 
 		print(name, ":Done")
 
-link_list = mynewlist[:100]
+link_list = mynewlist[400:500]
 
 save(link_list)
 
